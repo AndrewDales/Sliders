@@ -1,0 +1,4 @@
+pip==21.3
+setuptools==58.2.0
+pillow==8.4.0
+numpy==1.21.2
