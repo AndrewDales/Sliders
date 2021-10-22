@@ -1,28 +1,28 @@
 import tkinter as tk
+import os
 from pathlib import Path
 from PIL import ImageTk
 from functools import partial
 from image_slicer import SliderImages
 from slider import Slider
 
-
 PICTURE_FILE = "irish_red_setter.jpg"
 
 
 class SliderDisplay(tk.Frame):
-    n_dims = 3
 
     def __init__(self, parent, filename: Path, control_slider=None):
         super().__init__(parent)
 
         if control_slider is None:
-            control_slider = Slider(n_dims=4)
+            control_slider = Slider(n_rows=4)
             control_slider.shuffle()
 
         self.slider = control_slider
-        self.images = SliderImages.add_blank(SliderImages(filename).partition_image(self.n_dims))
+        self.images = SliderImages.add_blank(
+            SliderImages(filename).partition_image(self.slider.n_rows, self.slider.n_cols))
         self.tk_images = {k: ImageTk.PhotoImage(v) for k, v in self.images.items()}
-        self.coords = tuple((i, j) for i in range(self.n_dims) for j in range(self.n_dims))
+        self.coords = tuple((i, j) for i in range(self.slider.n_rows) for j in range(self.slider.n_cols))
 
         self.picture_buttons = [tk.Button(self,
                                           image=self.tk_images[pos],
@@ -55,8 +55,8 @@ if __name__ == '__main__':
     root.title('Slider')
     # root.resizable(False, False)
     img_path = Path('images', PICTURE_FILE)
-    initial_order = [2, 8, 1, 0, 7, 4, 6, 5, 3]
-    s_root = Slider(initial_order)
+    s_root = Slider(2, 3, [1, 3, 4, 5, 0, 2])
+    # s_root.shuffle()
     main_frame = SliderDisplay(root, img_path, s_root)
     main_frame.pack()
     root.mainloop()
