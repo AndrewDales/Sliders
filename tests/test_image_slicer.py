@@ -2,30 +2,26 @@ from pathlib import Path
 
 import pytest
 from PIL import Image
-from slider.image_slicer import SliderImage
+from slider.image_slicer import prepare_slider_images, partition_image
 
 
 @pytest.fixture
-def get_files():
+def filenames():
     files = {'cat': Path('resources', 'images', 'cat_with_whiskers.jpg'),
              'dog': Path('resources', 'images', 'irish_red_setter.jpg'),
              'tiger': Path('resources', 'images', 'tiger_landscape.jpg')}
     return files
 
 
-def test_resize_image(get_files):
-    # with Image.open(get_files['tiger']) as tiger_picture:
-    #     tiger_picture.show()
-    tiger_rs = SliderImage(get_files['tiger']).resize_image(200, 100)
-    tiger_rs.show()
-    assert tiger_rs.width == 200
-    assert tiger_rs.height == 100
+def test_partition_image(filenames):
+    with Image.open(filenames['dog']) as dog_im:
+        dog_rs = dog_im.resize((400, 200))
+        dog_parts = partition_image(dog_rs, 2, 4)
+    dog_parts[str((1, 1))].show()
+    assert all((part.width == 100 and part.height == 100 for part in dog_parts.values()))
 
 
-def test_partition_image():
-    dog_rs = SliderImage(get_files['dog']).resize_image(800, 400)
-    dog_parts = dog_rs
-
-
-def test_add_blank():
-    assert False
+def test_prepare_slider_images(filenames):
+    parts = prepare_slider_images(filenames['tiger'])
+    assert parts.keys() == {'images', 'blank'}
+    assert len(parts['images']) == 16
