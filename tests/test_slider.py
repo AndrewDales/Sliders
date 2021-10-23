@@ -3,7 +3,7 @@ import copy
 import pytest
 from numpy import array
 
-from slider import Slider, SliderNode, find_a_star_path, find_full_route
+from slider import Slider, SliderNode, find_a_star_path, find_full_route, create_partition
 import slider
 
 
@@ -157,27 +157,31 @@ class TestPathFinder:
         s_root = self.nodes[2]
         s_1 = find_a_star_path(s_root, target_values={0, 1, 2})
         s_2 = find_a_star_path(s_1, fixed_cells={0, 1, 2})
-        assert s_2.path == 'LURRDDLULDRUURDDLUULDRRULDLURRDLLU'
+        # assert s_2.path == 'LURRDDLULDRUURDDLUULDRRULDLURRDLLU'
+        assert s_2.path == 'LURRDDLULDRUURDDLULURDRULLDRURDLUL'
         assert s_2.dist_from_solution() == 0
         assert s_2.n_moves == 34
 
     def test_find_full_route_three_by_three_two_steps(self):
         s_root = self.nodes[2]
-        s_2, timings = find_full_route(s_root, [{0, 1, 2}, {3, 4, 5, 6, 7, 8}])
-        assert s_2.path == 'LURRDDLULDRUURDDLUULDRRULDLURRDLLU'
+
+        s_2, timings = find_full_route(s_root)
+        # assert s_2.path == 'LURRDDLULDRUURDDLUULDRRULDLURRDLLU'
+        assert s_2.path == 'LURRDDLULDRUURDDLULURDRULLDRURDLUL'
         assert s_2.dist_from_solution() == 0
         assert s_2.n_moves == 34
 
     def test_find_full_route_three_by_three_three_steps(self):
         s_root = self.nodes[2]
-        s_2, timings = find_full_route(s_root, [{0, 1, 2}, {3, 6}, {4, 5, 7, 8}])
+        s_2, timings = find_full_route(s_root)
         assert s_2.dist_from_solution() == 0
         assert s_2.n_moves >= 34
-        assert s_2.path == "LURRDDLULDRUURDDLUULDRRULDLURRDLLU"
+        # assert s_2.path == "LURRDDLULDRUURDDLUULDRRULDLURRDLLU"
+        assert s_2.path == "LURRDDLULDRUURDDLULURDRULLDRURDLUL"
 
     def test_find_full_route_four_by_four(self):
         s_root = self.nodes[3]
-        s_end, timings = find_full_route(s_root, [{0}, {1, 2, 3}, {4, 8, 12}, {5, 6, 7}, {9, 10, 11, 13, 14, 15}])
+        s_end, timings = find_full_route(s_root)
         print(s_end, sum(timings))
         assert s_end.dist_from_solution() == 0
 
@@ -185,9 +189,17 @@ class TestPathFinder:
         for _ in range(10):
             s_root = SliderNode(4)
             s_root.shuffle()
-            s_end, timings = find_full_route(s_root, [{0}, {1, 2, 3}, {4, 8, 12}, {5, 6, 7}, {9, 10, 11, 13, 14, 15}])
+            s_end, timings = find_full_route(s_root)
             print(s_end, f'Time = {sum(timings):.3f} seconds')
             assert s_end.dist_from_solution() == 0
+
+    def test_find_full_big(self):
+        s_root = SliderNode(8)
+        s_root.shuffle()
+        s_end, timings = find_full_route(s_root)
+        print(s_end, f'Time = {sum(timings):.3f} seconds')
+        assert s_end.dist_from_solution() == 0
+
 
 class TestHelperFunc:
 
@@ -195,7 +207,14 @@ class TestHelperFunc:
         assert slider.slider_dist(4, 13, 4) == 3
         assert slider.slider_dist(1, 18, 5) == 5
 
-    def test_find_sub_region(selfs):
+    def test_find_sub_region(self):
         assert slider.find_sub_region({6, 12, 13}, 4, 5) == {6, 7, 8, 11, 12, 13, 16, 17, 18}
         assert slider.find_sub_region({6, 12, 13}, 3, 5) == {1, 2, 3, 6, 7, 8, 11, 12, 13}
         assert slider.find_sub_region({7, 23}, 5, 5) == {7, 8, 9, 12, 13, 14, 17, 18, 19, 22, 23, 24}
+
+    def test_create_partition(self):
+        assert create_partition({9, 10, 11, 13, 14, 15}, 4, 4) == [{9, 10, 11, 13, 14, 15}]
+        assert create_partition({2, 7, 12, 17}, 4, 5) == [{2}, {7, 12, 17}]
+        assert create_partition({5, 6, 7, 9, 10, 11, 13, 14, 15}, 4, 4) == [{5, 6, 7}, {9, 10, 11, 13, 14, 15}]
+        assert create_partition(set(range(25)), 5, 5) == [{0, 1}, {2, 3, 4}, {5}, {10, 15, 20}, {6}, {7, 8, 9},
+                                                          {11, 16, 21}, {12, 13, 14}, {17, 18, 19, 22, 23, 24}]

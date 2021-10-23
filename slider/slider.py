@@ -214,8 +214,7 @@ class SliderNode(Slider):
 
 def find_a_star_path(starting_node: SliderNode,
                      target_values=None,
-                     fixed_cells=None,
-                     allow_fixing=None):
+                     fixed_cells=None):
     """ Use A* algorithm to find a path from the starting_node's current position to its solution.
         Only take into account the positions of the values in target_values
         The heuristic function is the sum of the Manhattan distance for each member of target_values from its
@@ -224,21 +223,19 @@ def find_a_star_path(starting_node: SliderNode,
         target_values = set(range(starting_node.n_rows * starting_node.n_cols))
     if fixed_cells is None:
         fixed_cells = set()
-    if allow_fixing is None:
-        allow_fixing = bool(fixed_cells)
 
     current_node = copy.deepcopy(starting_node)
     current_fixed = copy.copy(fixed_cells)
     current_node.target_positions = target_values
     visited = set()
     priority_queue = []
+    sub_size = max(min(current_node.n_cols, current_node.n_rows) - 1, 3)
     distant_region = set()
 
-    if allow_fixing:
-        # Find the three-by-three (or larger zone containing the targets
-        # distant_region is the rest of the board, which can be fixed when the target cells are not in it
-        close_region = find_sub_region(target_values, current_node.n_rows, current_node.n_cols)
-        distant_region = set(current_node.solution) - close_region
+    # Find the three-by-three (or larger) zone containing the targets
+    # distant_region is the rest of the board, which can be fixed when the target cells are not in it
+    close_region = find_sub_region(target_values, current_node.n_rows, current_node.n_cols, sub_size)
+    distant_region = set(current_node.solution) - close_region
 
     heapq.heappush(priority_queue, current_node)
     # todo - keeping track of distance. Remove when tested
@@ -250,14 +247,20 @@ def find_a_star_path(starting_node: SliderNode,
         current_node = heapq.heappop(priority_queue)
 
         # Check if all the target cells in the current mode are outside the distant_region
-        if allow_fixing:
+        if distant_region:
             cells_in_distant = {current_node.data[i] for i in distant_region}
             if not (cells_in_distant & (target_values | {current_node.blank})):
-                current_fixed = distant_region
+                current_fixed = distant_region | fixed_cells
                 # print("***Fixing***")
+                # print(f"New sub size = {sub_size}")
                 # print(current_node)
+                sub_size -= 1
+                if sub_size >= 3:
+                    close_region = find_sub_region(target_values, current_node.n_rows, current_node.n_cols, sub_size)
+                    distant_region = set(current_node.solution) - close_region
+                else:
+                    distant_region = set()
                 priority_queue = []
-                allow_fixing = False
 
         # ToDo - check that distance is decreasing, remove when tested
         new_dist = current_node.dist_from_solution(target_values)
@@ -296,7 +299,8 @@ def show_route(starting_node: SliderNode, path):
     return current_node
 
 
-def find_full_route(slider, partition):
+def find_full_route(slider):
+    partition = create_partition(set(range(slider.n_rows * slider.n_cols)), slider.n_rows, slider.n_cols)
     s = [copy.deepcopy(slider)]
     fixed = set()
     times = []
@@ -305,7 +309,7 @@ def find_full_route(slider, partition):
         s_step = find_a_star_path(s[-1], target_values=current_part, fixed_cells=fixed)
         times.append(perf_counter() - t)
         t = perf_counter()
-        # print(s_step)
+        print(s_step)
         s.append(copy.deepcopy(s_step))
         fixed |= current_part
     return s[-1], times
@@ -318,16 +322,47 @@ def slider_dist(x, y, num_cols):
     return abs(x1 - y1) + abs(x2 - y2)
 
 
-def find_sub_region(targets, n_rows, n_cols):
+def find_sub_region(targets, n_rows, n_cols, sub_size=3):
     """ Find the sub-region containing all the cells in targets, which is at least 3 by 3"""
     rows, cols = np.divmod(tuple(targets), n_cols)
-    r_min = min(min(rows), n_rows - 3)
-    r_max = max(r_min + 3, max(rows) + 1)
-    c_min = min(min(cols), n_cols - 3)
-    c_max = max(c_min + 3, max(cols) + 1)
+    r_min = min(min(rows), n_rows - sub_size)
+    r_max = max(r_min + sub_size, max(rows) + 1)
+    c_min = min(min(cols), n_cols - sub_size)
+    c_max = max(c_min + sub_size, max(cols) + 1)
     return {i * n_cols + j for i in range(r_min, r_max) for j in range(c_min, c_max)}
 
 
+def create_partition(initial_set, n_rows, n_cols):
+    """ Recursive function to create a partition by splitting off the first row or column
+    Single rows or columns are split into chunks of three or less """
+
+    rows, cols = np.divmod(tuple(initial_set), n_cols)
+    row_range = max(rows) - min(rows) + 1
+    col_range = max(cols) - min(cols) + 1
+
+    # smaller than 3*2 chunks arrangements don't have to be split
+    if (row_range <=2 and col_range <=3) or (row_range <= 3 and col_range <=2):
+        partitioned_set = [initial_set]
+
+    # Split the list into chunks of three from the end of the list
+    elif row_range == 1 or col_range == 1:
+        sorted_set = sorted(initial_set, reverse=True)
+        partitioned_set = [set(sorted_set[i:i+3]) for i in range(0, len(sorted_set), 3)]
+        partitioned_set.reverse()
+
+    # Split off the top row
+    elif row_range >= 3 and row_range >= col_range:
+        first_row = {i for i, r in zip(initial_set, rows) if r == min(rows)}
+        remainder = initial_set - first_row
+        partitioned_set = create_partition(first_row, n_rows, n_cols) + create_partition(remainder, n_rows, n_cols)
+
+    # Split off the left-most column
+    else:
+        first_col = {i for i, c in zip(initial_set, cols) if c == min(cols)}
+        remainder = initial_set - first_col
+        partitioned_set = create_partition(first_col, n_rows, n_cols) + create_partition(remainder, n_rows, n_cols)
+
+    return partitioned_set
 
 
 if __name__ == '__main__':
@@ -338,5 +373,10 @@ if __name__ == '__main__':
     # s_end, timings = find_full_route(s_0, [{0, 1}, {2, 3}, {4, 8, 12}, {5, 6, 7}, {9, 10, 11, 13, 14, 15}])
     # print(s_end[-1])
     # print(f'Time taken = {sum(timings):.2f} seconds')
-    find_a_star_path(SliderNode(4, 4, [0, 15, 15, 7, 3, 2, 12, 11, 9, 13, 5, 1, 6, 8, 10, 4]), target_values={1, 2, 3},
-                     fixed_cells={0}, allow_fixing=True)
+    # find_a_star_path(SliderNode(4, 4, [0, 15, 15, 7, 3, 2, 12, 11, 9, 13, 5, 1, 6, 8, 10, 4]), target_values={1, 2, 3},
+    #                  fixed_cells={0}, allow_fixing=True)
+
+    s_0 = SliderNode(7)
+    s_0.shuffle()
+    s_end, timings = find_full_route(s_0)
+    print(f'Time taken = {sum(timings):.2f} seconds')

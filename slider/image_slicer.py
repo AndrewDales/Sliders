@@ -3,51 +3,55 @@ from pathlib import Path
 from PIL import Image
 
 
-class SliderImages:
+class SliderImage:
+    """ SlicerImage stores the location of an image file that can be resized and partitioned"""
     blank_color: str = "midnightblue"
-    num_pixels: int = 600
+    width: int = 600
+    height: int = 600
 
     def __init__(self, filename: Path):
         self.filename = filename
         self.parts = None
-        self.n_x = None
-        self.n_y = None
+        self.n_rows = None
+        self.n_cols = None
 
-    def resize_image(self, pixels=None):
-        if pixels is None:
-            pixels = self.num_pixels
+    def resize_image(self, width=None, height=None):
+        if width is None:
+            width = self.width
+        if height is None:
+            height = width
 
         with Image.open(self.filename) as full_image:
-            resized_image = full_image.resize((pixels, pixels))
-        self.num_pixels = pixels
+            resized_image = full_image.resize((width, height))
+        self.width = width
+        self.height = height
         return resized_image
 
-    def partition_image(self, n_x=None, n_y=None):
-        if n_x is None:
-            n_x = 3
-        if n_y is None:
-            n_y = n_x
+    def partition_image(self, n_rows=None, n_cols=None):
+        if n_rows is None:
+            n_rows = 3
+        if n_cols is None:
+            n_cols = n_rows
 
-        self.n_x = n_x
-        self.n_y = n_y
+        self.n_rows = n_rows
+        self.n_cols = n_cols
 
         with Image.open(self.filename) as image:
-            if image.size != (self.num_pixels, self.num_pixels):
-                image = self.resize_image()
+            dx = self.width // n_cols
+            dy = self.height // n_rows
 
-            dx = self.num_pixels // n_x
-            dy = self.num_pixels // n_y
-
-            self.parts = {(j, i): image.crop((dx * i, dy * j, dx * (i + 1), dy * (j + 1)))
-                          for i in range(n_x) for j in range(n_y)
+            self.parts = {(i, j): image.crop((dx * i, dy * j, dx * (i + 1), dy * (j + 1)))
+                          for i in range(n_rows) for j in range(n_cols)
                           }
         return self.parts
 
-    @staticmethod
-    def add_blank(parts, pos=None, blank_color="midnightblue"):
+    @classmethod
+    def add_blank(cls, parts, pos=None, blank_color=None):
         # Find the last target_positions in the dictionary to make blank
         if pos is None:
             pos = list(parts.keys())[-1]
+        if blank_color is None:
+            blank_color = cls.blank_color
 
         parts[pos] = Image.new('RGBA', parts[pos].size, blank_color)
         return parts
@@ -68,7 +72,7 @@ def partition_image(filename: Path, n_x=None, n_y=None, ):
     if not os.path.isdir(parts_dir):
         os.mkdir(parts_dir)
 
-    # Crop the image into slices so there are n_x slices across and n_y slices down and save them in the directory
+    # Crop the image into slices so there are n_rows slices across and n_cols slices down and save them in the directory
     with Image.open(filename) as image_file:
         width, height = image_file.size
         width_d = width // n_x
@@ -85,5 +89,5 @@ def partition_image(filename: Path, n_x=None, n_y=None, ):
 
 
 if __name__ == '__main__':
-    cat_file = Path('images', 'cat_with_whiskers.png')
+    cat_file = Path('../resources/images', 'cat_with_whiskers.png')
     partition_image(cat_file, 4)
