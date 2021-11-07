@@ -31,6 +31,28 @@ class Slider:
         self.blank = max(self.data)
         self.blank_pos = self.data.index(self.blank)
 
+    @property
+    def coords(self):
+        return tuple(divmod(val, self.n_cols) for val in self.data)
+
+    @property
+    def is_solved(self):
+        """ Check if the slider is in a solved position"""
+        return tuple(self.data) == self.solution
+
+    @property
+    def is_soluble(self):
+        """Find if the permutation is soluble by finding the parity of the permutation + the parity of the
+        taxicab distance of the blank square in the problem and the taxi distance of the blank square in the solution.
+        If the two are equal - the solution is soluble
+        see https://en.wikipedia.org/wiki/15_puzzle """
+        parity = self._find_parity(self.data, self.solution)
+        blank_val = max(self.data)
+        blank_data_parity = sum(self._find_row_col(self.data.index(blank_val), self.n_cols)) % 2
+        blank_solution_parity = sum(self._find_row_col(self.solution.index(blank_val), self.n_cols)) % 2
+
+        return (parity + blank_data_parity + blank_solution_parity) % 2 == 0
+
     @staticmethod
     def _find_row_col(val, n_cols):
         """ Find the row and column given an index value. Default is the blank position """
@@ -56,19 +78,6 @@ class Slider:
                 parity += 1
         return parity % 2
 
-    @property
-    def is_soluble(self):
-        """Find if the permutation is soluble by finding the parity of the permutation + the parity of the
-        taxicab distance of the blank square in the problem and the taxi distance of the blank square in the solution.
-        If the two are equal - the solution is soluble
-        see https://en.wikipedia.org/wiki/15_puzzle """
-        parity = self._find_parity(self.data, self.solution)
-        blank_val = max(self.data)
-        blank_data_parity = sum(self._find_row_col(self.data.index(blank_val), self.n_cols)) % 2
-        blank_solution_parity = sum(self._find_row_col(self.solution.index(blank_val), self.n_cols)) % 2
-
-        return (parity + blank_data_parity + blank_solution_parity) % 2 == 0
-
     def _swap(self, i1, i2):
         """ Swap the positions of two values in the Slider data"""
         self.data[i1], self.data[i2] = self.data[i2], self.data[i1]
@@ -90,7 +99,7 @@ class Slider:
             # Only allow neighbours which are within the grid
             if ((0 <= cell_pos[0] < self.n_rows) and (0 <= cell_pos[1] < self.n_cols)
                     and not (self._find_pos_index(cell_pos, self.n_cols) in fixed_cells)):
-                neighbours[k] = cell_pos
+                neighbours[k] = self._find_pos_index(cell_pos, self.n_cols)
         return neighbours
 
     def shuffle(self):
@@ -111,12 +120,12 @@ class Slider:
         # Find the tile that can be moved 'R', 'L', 'U' or 'D'
         try:
             cell = neighbours[direction]
-            cell_index = self._find_pos_index(cell, self.n_cols)
+            # cell_index = self._find_pos_index(cell, self.n_cols)
         # Raise an error if there is no cell that can be moved in the desired swap_direction
         except KeyError:
             raise SlideError(f"Can not slide in direction '{direction}'")
         # Swap the relevant cell with the blank position
-        self._swap(cell_index, self.blank_pos)
+        self._swap(cell, self.blank_pos)
 
     def dist_from_solution(self, target_values=None):
         """ Find the total distance from the current positions to the solution position, looking only
@@ -187,6 +196,12 @@ class SliderNode(Slider):
         self.n_moves += 1
         self.path += direction
 
+    def shuffle(self):
+        """ modified shuffle, resets path and n_moves"""
+        super().shuffle()
+        self.n_moves = 0
+        self.path = ""
+
     def return_neighbours(self, fixed_positions=None):
         """ return a new set of SliderNodes which are neighbours of self and are in the allowable rows or columns"""
         if fixed_positions is None:
@@ -194,10 +209,7 @@ class SliderNode(Slider):
 
         neighbour_cells = self.find_blank_neighbours(fixed_cells=fixed_positions)
         neighbour_sliders = []
-        for direction, cell in neighbour_cells.items():
-            # Find the position index of the neighbour
-            pos_index = self._find_pos_index(cell, self.n_cols)
-
+        for direction, pos_index in neighbour_cells.items():
             # User _swap_copy to create copies of each of the neighbour cells.
             # Change the n_moves and path attributes to show the extra move
             neighbour = self._swap_copy(pos_index, self.blank_pos)
@@ -309,7 +321,7 @@ def find_full_route(slider):
         s_step = find_a_star_path(s[-1], target_values=current_part, fixed_cells=fixed)
         times.append(perf_counter() - t)
         t = perf_counter()
-        print(s_step)
+        # print(s_step)
         s.append(copy.deepcopy(s_step))
         fixed |= current_part
     return s[-1], times

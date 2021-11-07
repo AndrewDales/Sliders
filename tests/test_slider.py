@@ -37,6 +37,9 @@ class TestSlider:
     def test__find_pos_index(self):
         assert Slider._find_pos_index(array((2, 3)), 4) == 11
 
+    def test_coords(self, valid_slider):
+        assert valid_slider['s_2_3'].coords == ((0, 0), (0, 1), (1, 2), (1, 0), (1, 1), (0, 2))
+
     def test_is_soluble(self, valid_slider):
         assert valid_slider['s_2_3'].is_soluble
         assert valid_slider['s_4_4'].is_soluble
@@ -55,8 +58,8 @@ class TestSlider:
     def test_find_blank_neighbours(self, valid_slider):
         n_1 = valid_slider['s_2_3'].find_blank_neighbours()
         assert set(n_1) == {"R", "U"}
-        assert (n_1["R"] == array((0, 1))).all()
-        assert (n_1["U"] == array((1, 2))).all()
+        assert n_1["R"] == 1
+        assert n_1["U"] == 5
         n_2 = valid_slider['s_4_4'].find_blank_neighbours(fixed_cells={12, 13, 14, 15})
         assert set(n_2) == {"D", "R"}
 

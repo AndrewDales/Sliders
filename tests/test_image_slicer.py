@@ -17,8 +17,8 @@ def test_partition_image(filenames):
     with Image.open(filenames['dog']) as dog_im:
         dog_rs = dog_im.resize((400, 200))
         dog_parts = partition_image(dog_rs, 2, 4)
-    dog_parts[str((1, 1))].show()
-    assert all((part.width == 100 and part.height == 100 for part in dog_parts.values()))
+    dog_parts[3].show()
+    assert all(part.width == 100 and part.height == 100 for part in dog_parts)
 
 
 def test_prepare_slider_images(filenames):
