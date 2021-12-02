@@ -42,7 +42,7 @@ class SliderApplication(tk.Frame):
         self.title.grid(row=0, column=0, columnspan=2, padx=20, pady=20)
         self.frames['display'].grid(row=1, column=0, padx=20, pady=10)
         self.frames['controls'].grid(row=1, column=1, padx=20, pady=20)
-        self.solution_label.grid(row=2, column=0, columnspan=2, padx=20, pady=(10,20))
+        self.solution_label.grid(row=2, column=0, columnspan=2, padx=20, pady=(10, 20))
         self.shuffle()
 
         # style
@@ -88,9 +88,8 @@ class SliderApplication(tk.Frame):
         else:
             self.solution_label.config(text="")
 
-
     def solve_puzzle(self):
-        self.disable_widgets(self)
+        # self.disable_widgets(self)
         self.slider.path = ""
         s_solved, timings = find_full_route(self.slider)
         self.solution_path = iter(s_solved.path)

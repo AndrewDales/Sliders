@@ -2,6 +2,7 @@ import copy
 
 import pytest
 from numpy import array
+from time import perf_counter
 
 from slider import Slider, SliderNode, find_a_star_path, find_full_route, create_partition
 import slider
@@ -202,6 +203,34 @@ class TestPathFinder:
         s_end, timings = find_full_route(s_root)
         print(s_end, f'Time = {sum(timings):.3f} seconds')
         assert s_end.dist_from_solution() == 0
+
+    # Test the speed and the optimality (number of moves) for different move_weights in the A* algorithm.
+    # The algorithm's objective function is f(x) = g(x) * w + h(x), where g(x) is the number of moves taken
+    # h(x) is the heuristic function based on the sum of the manhattan distances of each of the tiles from its
+    # correct position and w is a weight given by s_root.move_weight
+    # Test for 3 by 3 tile set
+    def test_opt_speed(self):
+        s_root = self.nodes[2]
+        for weights in [0, 0.1, 0.5, 1, 10]:
+            s_root.move_weight = weights
+            t = perf_counter()
+            s_end = find_a_star_path(s_root)
+            time_taken = perf_counter() - t
+            print(s_end)
+            print(f'Weight={s_root.move_weight}, Path length={s_end.n_moves}, Time taken={time_taken:.4f}')
+            print(s_end.path)
+
+    # Test as above for 4 by 4 tile set
+    def test_opt_speed_4(self):
+        s_root = self.nodes[3]
+        for weights in [0, 0.1, 0.3]:
+            s_root.move_weight = weights
+            t = perf_counter()
+            s_end = find_a_star_path(s_root)
+            time_taken = perf_counter() - t
+            print(s_end)
+            print(f'Weight={s_root.move_weight}, Path length={s_end.n_moves}, Time taken={time_taken:.4f}')
+            print(s_end.path)
 
 
 class TestHelperFunc:

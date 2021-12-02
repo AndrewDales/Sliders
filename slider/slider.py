@@ -378,17 +378,8 @@ def create_partition(initial_set, n_rows, n_cols):
 
 
 if __name__ == '__main__':
-    # s_0 = SliderNode(4, 4, [14, 2, 6, 10, 15, 12, 4, 8, 11, 5, 13, 7, 3, 9, 1, 0])
-    # tic = perf_counter()
-    # s_end, timings = find_full_route(s_0, [{0, 1, 2, 3}, {4, 8, 12}, {5, 6, 7}, {9, 10, 11, 13, 14, 15}])
-    # s_end, timings = find_full_route(s_0, [{0, 1, 4, 5}, {2, 3, 6, 7}, {8, 9, 12, 13}, {10, 11, 14, 15}])
-    # s_end, timings = find_full_route(s_0, [{0, 1}, {2, 3}, {4, 8, 12}, {5, 6, 7}, {9, 10, 11, 13, 14, 15}])
-    # print(s_end[-1])
-    # print(f'Time taken = {sum(timings):.2f} seconds')
-    # find_a_star_path(SliderNode(4, 4, [0, 15, 15, 7, 3, 2, 12, 11, 9, 13, 5, 1, 6, 8, 10, 4]), target_values={1, 2, 3},
-    #                  fixed_cells={0}, allow_fixing=True)
 
-    s_0 = SliderNode(7)
+    s_0 = SliderNode(4)
     s_0.shuffle()
     s_end, timings = find_full_route(s_0)
     print(f'Time taken = {sum(timings):.2f} seconds')
